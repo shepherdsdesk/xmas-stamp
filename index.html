@@ -7,44 +7,47 @@
   <title>성탄 말씀 스탬프 여정</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="member">
   <!-- 불러오는 중 -->
-  <section id="v-loading" class="loading">불러오는 중입니다</section>
+  <section id="v-loading" class="loading"><svg class="twinkle" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4 L61 37 L96 38 L68 59 L78 93 L50 73 L22 93 L32 59 L4 38 L39 37 Z" fill="#f3cf7a"/></svg><span>불러오는 중입니다</span></section>
 
   <!-- 처음: 이름과 번호 -->
   <section id="v-start" hidden>
-    <div class="wrap">
-      <div class="hero" style="background-image:url(img/church.jpg)"></div>
-      <div class="stack">
-        <div class="stack-8">
-          <p class="label" id="s-church"></p>
-          <h1 id="s-title"></h1>
-          <p class="muted" id="s-sub"></p>
+    <div class="welcome">
+      <div class="photo" style="background-image:url(img/church.jpg)"><div class="glow" aria-hidden="true"></div></div>
+      <span class="pill" id="s-church"></span>
+      <div class="body stack">
+        <div>
+          <p class="label" id="s-title"></p>
+          <h1 class="title" id="s-sub"></h1>
         </div>
-        <div class="card stack-8">
-          <p>교회 안 <b id="s-count">다섯</b> 곳에서 스탬프를 받으며 성탄 말씀을 묵상합니다.</p>
-          <p class="muted small">장소 안내판의 숫자 4자리를 넣거나, 휴대폰 카메라로 QR을 찍으면 스탬프가 찍힙니다. 순서는 상관없습니다.</p>
-        </div>
-        <p class="notice" id="s-qrnote" hidden>이름과 번호를 넣으시면 이 장소 스탬프가 바로 찍힙니다.</p>
-        <form id="f-start" class="stack" novalidate>
-          <div class="field"><label for="i-name">이름</label>
-            <input id="i-name" class="input" autocomplete="name" maxlength="20" placeholder="홍길동"></div>
-          <div class="field"><label for="i-phone">휴대폰 번호</label>
-            <input id="i-phone" class="input" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000"></div>
-          <label class="check"><input type="checkbox" id="i-agree">
-            <span><b>개인정보 수집·이용에 동의합니다</b><br><span class="muted small" id="s-agree"></span></span></label>
-          <p class="err" id="e-start" role="alert"></p>
-          <button class="btn" type="submit" id="b-start">시작하기</button>
-          <p class="muted small center">전에 참여하셨다면 같은 이름과 번호를 넣으십시오. 기록이 이어집니다.</p>
-        </form>
+        <div id="s-motto"></div>
+        <p class="lead">교회 곳곳에 숨은 <b id="s-count">다섯</b> 별을 찾아<br>성탄 표어를 완성해 보십시오.</p>
       </div>
+    </div>
+    <div class="wrap stack">
+      <div class="card stack-8">
+        <p class="muted small">장소 안내판의 숫자 4자리를 넣거나, 휴대폰 카메라로 QR을 찍으면 별 스탬프가 찍힙니다. 순서는 상관없습니다.</p>
+      </div>
+      <p class="notice" id="s-qrnote" hidden>이름과 번호를 넣으시면 이 장소 스탬프가 바로 찍힙니다.</p>
+      <form id="f-start" class="stack" novalidate>
+        <div class="field"><label for="i-name">이름</label>
+          <input id="i-name" class="input" autocomplete="name" maxlength="20" placeholder="홍길동"></div>
+        <div class="field"><label for="i-phone">휴대폰 번호</label>
+          <input id="i-phone" class="input" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000"></div>
+        <label class="check"><input type="checkbox" id="i-agree">
+          <span><b>개인정보 수집·이용에 동의합니다</b><br><span class="muted small" id="s-agree"></span></span></label>
+        <p class="err" id="e-start" role="alert"></p>
+        <button class="btn" type="submit" id="b-start">시작하기</button>
+        <p class="muted small center">전에 참여하셨다면 같은 이름과 번호를 넣으십시오. 기록이 이어집니다.</p>
+      </form>
     </div>
   </section>
 
   <!-- 내 스탬프 -->
   <section id="v-home" hidden>
     <div class="wrap with-dock stack" id="home"></div>
-    <div class="dock" id="dock"><button class="btn" id="b-stamp" type="button">스탬프 찍기</button></div>
+    <div class="dock" id="dock"><button class="btn" id="b-stamp" type="button"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4 L61 37 L96 38 L68 59 L78 93 L50 73 L22 93 L32 59 L4 38 L39 37 Z" fill="#111a2c"/></svg>스탬프 찍기</button></div>
   </section>
 
   <div id="toast" role="status" aria-live="polite"></div>

@@ -2,6 +2,82 @@
 (function () {
   var $ = Api.$, esc = Api.esc;
   var cfg = null, me = null, photos = {}, pending = null;
+  var STAR = 'M50 4 L61 37 L96 38 L68 59 L78 93 L50 73 L22 93 L32 59 L4 38 L39 37 Z';
+
+  /* ---------- 그림 조각 ---------- */
+  function starSvg(fill, stroke) {
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="' + STAR + '" fill="' + (fill || '#f3cf7a') + '" stroke="' +
+      (stroke || 'rgba(255,255,255,.7)') + '" stroke-width="2" stroke-linejoin="round"/></svg>';
+  }
+  function bigStarSvg() {
+    return '<svg class="star" viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="sg" cx="50%" cy="40%" r="60%">' +
+      '<stop offset="0" stop-color="#fff6d6"/><stop offset=".55" stop-color="#f3cf7a"/><stop offset="1" stop-color="#c9973a"/></radialGradient></defs>' +
+      '<circle cx="50" cy="50" r="46" fill="none" stroke="#f3cf7a" stroke-width="2.5" stroke-dasharray="4 5"/>' +
+      '<path d="M50 12 L59.5 39.5 L88.5 40.5 L65.5 58 L74 86 L50 69.5 L26 86 L34.5 58 L11.5 40.5 L40.5 39.5 Z" fill="url(#sg)" stroke="#fff3c9" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  }
+  function giftSvg() {
+    return '<svg class="gift-ico" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<path d="' + STAR + '" transform="translate(41 0) scale(.18)" fill="#ffe39e"/>' +
+      '<rect x="18" y="40" width="64" height="16" rx="3" fill="#f3cf7a"/><rect x="22" y="56" width="56" height="34" rx="3" fill="#e2b75a"/>' +
+      '<rect x="45" y="40" width="10" height="50" fill="#9a3b2e"/><path d="M50 40 C40 26 26 30 34 38 Z M50 40 C60 26 74 30 66 38 Z" fill="#9a3b2e"/></svg>';
+  }
+  function barcodeSvg(code) {
+    var x = 0, bars = '', t = '*' + String(code || '') + '*';
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charCodeAt(i);
+      for (var b = 0; b < 7; b++) {
+        var w = ((c >> b) & 1) ? 3 : 1.4;
+        if (b % 2 === 0) bars += '<rect x="' + x.toFixed(1) + '" y="0" width="' + w + '" height="60" fill="#111a2c"/>';
+        x += w + 1.2;
+      }
+      x += 2;
+    }
+    return '<svg viewBox="0 0 ' + x.toFixed(1) + ' 60" preserveAspectRatio="none" aria-hidden="true">' + bars + '</svg>';
+  }
+  function theme(p) { return String(p.title || '').split('·')[0].trim(); }
+
+  // 표어를 장소 수만큼 나눕니다. '/'로 나눠 두었으면 그대로, 아니면 글자 수가 고르게 나뉘도록.
+  function mottoWords(n) {
+    var m = String((cfg && cfg.motto) || '').trim();
+    if (!m || !n) return [];
+    if (m.indexOf('/') >= 0) {
+      var parts = m.split('/').map(function (x) { return x.trim(); }).filter(Boolean);
+      return parts.length === n ? parts : [];
+    }
+    var w = m.split(/\s+/);
+    if (w.length < n) return [];
+    var len = w.map(function (x) { return x.length; }), total = len.reduce(function (a, b) { return a + b; }, 0) + w.length - n, avg = total / n;
+    var memo = {};
+    function best(i, k) { // w[i..] 를 k 조각으로
+      var key = i + ',' + k; if (memo[key]) return memo[key];
+      if (k === 1) { var l = 0; for (var j = i; j < w.length; j++) l += len[j] + (j > i ? 1 : 0); return memo[key] = { c: (l - avg) * (l - avg), cut: [w.length] }; }
+      var r = null, l2 = 0;
+      for (var e = i; e <= w.length - k; e++) {
+        l2 += len[e] + (e > i ? 1 : 0);
+        var rest = best(e + 1, k - 1), c = (l2 - avg) * (l2 - avg) + rest.c;
+        if (!r || c < r.c) r = { c: c, cut: [e + 1].concat(rest.cut) };
+      }
+      return memo[key] = r;
+    }
+    var cuts = best(0, n).cut, out = [], st = 0;
+    cuts.forEach(function (e) { out.push(w.slice(st, e).join(' ')); st = e; });
+    return out;
+  }
+  function mottoHtml(places, justNo, all) {
+    var words = mottoWords(places.length);
+    if (!words.length) return '';
+    return '<div class="motto" role="img" aria-label="성탄 표어">' + places.map(function (p, i) {
+      var on = all || p.stamped;
+      return '<span class="piece' + (on ? ' on' : '') + (p.no === justNo ? ' just' : '') + '">' + esc(words[i]) +
+        '<span class="ph">' + p.no + ' · ' + esc(theme(p)) + '</span></span>';
+    }).join('') + '</div>';
+  }
+  function progressHtml(s) {
+    var pct = s.total ? Math.round(s.count / s.total * 100) : 0;
+    return '<div class="stack-8"><div class="progress-text"><span>나의 별 여정</span><span><b>' + s.count + '</b> / ' + s.total + ' 완료</span></div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+  }
+  function countWord(n) { return ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'][n] || String(n); }
 
   // 장소 QR로 열었을 때: ?s=3.키
   (function readQr() {
@@ -43,7 +119,8 @@
     $('s-church').textContent = cfg.church;
     $('s-title').textContent = cfg.title;
     $('s-sub').textContent = cfg.subtitle;
-    $('s-count').textContent = cfg.places.length + '';
+    $('s-count').textContent = countWord(cfg.places.length);
+    $('s-motto').innerHTML = mottoHtml(cfg.places.map(function (p) { return { no: p.no, title: p.title || '' }; }), 0, true);
     $('s-agree').textContent = '스탬프 기록과 선물 전달, 기도제목 연락에만 쓰고 ' + cfg.retention + '에 지웁니다.';
     $('s-qrnote').hidden = !pending;
     if (!cfg.window.open) { $('e-start').textContent = cfg.window.message; }
@@ -72,13 +149,12 @@
 
   /* ---------- 내 스탬프 ---------- */
   function renderHome() {
-    var s = me, pct = s.total ? Math.round(s.count / s.total * 100) : 0;
+    var s = me;
     var html = '';
-    html += '<div class="stack-8"><p class="label">' + esc(cfg.title) + '</p>' +
-      '<h1>' + esc(s.name) + ' 님의 스탬프</h1></div>';
-    html += '<div class="card stack-8"><div style="display:flex;justify-content:space-between;align-items:baseline">' +
-      '<span class="muted">받은 스탬프</span><span><b style="font-size:30px;color:var(--gold)">' + s.count + '</b> / ' + s.total + '</span></div>' +
-      '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+    html += '<div class="stack-8"><p class="label">' + esc(cfg.subtitle || cfg.title) + '</p>' +
+      '<h1>' + esc(s.name) + ' 님의 별 여정</h1></div>';
+    var motto = mottoHtml(s.places, 0, false);
+    html += '<div class="card stack">' + (motto ? '<p class="label">성탄 표어</p>' + motto : '') + progressHtml(s) + '</div>';
 
     if (s.completed) html += doneBlock(s);
 
@@ -89,7 +165,7 @@
         '<span class="txt"><span class="t1">' + p.no + '. ' + esc(p.title) + '</span>' +
         '<span class="t2">' + esc(p.name || p.floor || '사진 속 장소') + '</span>' +
         (p.floor && (p.name || '').indexOf(p.floor) < 0 ? '<span class="t3">' + esc(p.floor) + '</span>' : '') + '</span>' +
-        '<span class="state" aria-label="' + (p.stamped ? '받음' : '아직') + '">' + (p.stamped ? '✓' : '') + '</span></button>';
+        '<span class="state" aria-label="' + (p.stamped ? '받음' : '아직') + '">' + (p.stamped ? starSvg('#fff6d6', '#9a6b00') : p.no) + '</span></button>';
     }).join('') + '</div>';
 
     html += '<div class="stack-8 center" style="padding-top:8px">' +
@@ -109,11 +185,15 @@
   }
 
   function doneBlock(s) {
-    var h = '<div class="card paper voucher stack-8"><p class="label">완주를 축하합니다</p>' +
-      '<p class="code">' + esc(s.voucher) + '</p>' +
-      (s.giftReceived ? '<p><span class="badge ok">선물 받음</span></p>' : '<p>' + esc(cfg.giftNote) + '</p>') + '</div>';
+    var h = '<div class="card gold celebrate stack-8">' + starSvg() + '<h2 class="big-title">완주를 축하합니다</h2>' +
+      '<p class="muted">별을 따라 베들레헴까지 ' + countWord(s.total) + ' 곳을 모두 다녀오셨습니다.</p></div>';
+    h += '<div class="ticket' + (s.giftReceived ? ' used' : '') + '">' + (s.giftReceived ? '<div class="t-done">선물 받음</div>' : '') +
+      '<div class="t-label">선물 교환권</div><div class="t-code">' + esc(s.voucher) + '</div>' +
+      '<div class="barcode">' + barcodeSvg(s.voucher) + '</div>' +
+      '<p>' + (s.giftReceived ? '선물을 받으셨습니다. 함께해 주셔서 감사합니다.' : esc(cfg.giftNote)) + '</p></div>';
     if (s.prayerDone) h += '<button class="btn quiet" id="b-word" type="button">함께 묵상할 말씀 다시 보기</button>';
-    else h += '<div class="card stack-8"><h3>기도제목 나누기</h3><p class="muted small">성탄의 감사와 새해 기도제목을 나눠 주시면 교구가 함께 기도합니다. (선택)</p>' +
+    else h += '<div class="card gold center stack-8">' + giftSvg() + '<p class="label">보배합 열기</p><h3>성탄 감사와 새해 기도제목</h3>' +
+      '<p class="muted small">동방 박사들이 보배합을 열었듯, 한 해의 감사와 새해 기도제목을 나눠 주십시오. 교구가 함께 기도합니다. (선택)</p>' +
       '<button class="btn" id="b-pray" type="button">기도제목 나누기</button></div>';
     return h;
   }
@@ -197,13 +277,16 @@
   }
 
   function stampResult(r) {
-    var p = r.place, done = r.justCompleted;
+    var p = r.place, done = r.justCompleted, fresh = r.status === 'OK';
+    var motto = mottoHtml(me.places, fresh ? p.no : 0, false);
     Api.openModal(
       '<div class="stack">' +
-      '<p class="label center">' + p.no + '. ' + esc(p.title) + '</p>' +
-      '<h2 class="center">' + esc(r.message) + '</h2>' +
-      (p.verse ? '<div class="card paper stack-8"><p class="ref">' + esc(p.ref) + '</p><p class="verse">' + Api.nl(p.verse) + '</p></div>' : '') +
-      (done ? '<div class="card stack-8 center"><h3>모든 장소의 스탬프를 받으셨습니다</h3><p class="muted small">선물 교환권이 내 스탬프 화면에 나옵니다.</p></div>' : '') +
+      (fresh ? '<div class="stamp-fx">' + bigStarSvg() + '<div class="ring"></div></div>' : '') +
+      '<div class="stack-8 center"><p class="label">' + p.no + '번 별 · ' + esc(theme(p)) + '</p>' +
+      '<h2 class="big-title">' + (done ? '성탄 표어를 완성했습니다' : fresh ? p.no + '번 별을 찾았습니다' : esc(r.message)) + '</h2></div>' +
+      motto + '<div class="card">' + progressHtml(me) + '</div>' +
+      (p.verse ? '<div class="card gold stack-8"><p class="label">오늘의 묵상</p><p class="ref">' + esc(p.ref) + '</p><p class="verse">' + Api.nl(p.verse) + '</p></div>' : '') +
+      (done ? '<div class="card stack-8 center"><h3>모든 별을 찾으셨습니다</h3><p class="muted small">선물 교환권이 내 별 여정 화면에 나옵니다.</p></div>' : '') +
       '<button class="btn" type="button" id="b-ok">확인</button></div>', { dismiss: false });
     $('b-ok').onclick = function () { Api.closeModal(); if (done && !me.prayerDone) prayerForm(); };
   }
@@ -212,8 +295,8 @@
   function prayerForm() {
     Api.openModal(
       '<form id="f-pray" class="stack" novalidate>' +
-      '<div class="stack-8"><h2>기도제목 나누기</h2>' +
-      '<p class="muted small">성탄의 감사와 새해 기도제목을 적어 주십시오. 담당 교역자만 보며 교구가 함께 기도합니다.</p></div>' +
+      '<div class="stack-8 center">' + giftSvg() + '<p class="label">보배합 열기</p><h2>성탄 감사와 새해 기도제목</h2>' +
+      '<p class="muted small">동방 박사들이 보배합을 열었듯, 한 해의 감사와 새해 기도제목을 적어 주십시오. 담당 교역자만 보며 교구가 함께 기도합니다.</p></div>' +
       '<textarea id="i-pray" class="textarea" maxlength="1000" aria-label="기도제목"></textarea>' +
       '<div class="field"><label>연락 방법</label>' +
       ['기도만', '전화 상담', '심방 요청'].map(function (c, i) {
