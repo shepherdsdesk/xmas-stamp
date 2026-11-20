@@ -143,7 +143,7 @@
       '<input id="i-code" class="input digits" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="숫자 4자리">' +
       '<p class="err center" id="e-code" role="alert"></p>' +
       '<button class="btn" type="submit" id="b-code">확인</button>' +
-      (Scanner.supported() ? '<button class="btn quiet" type="button" id="b-cam">카메라로 QR 찍기</button>' : '') +
+      '<button class="btn quiet" type="button" id="b-cam">카메라로 QR 찍기</button>' +
       '<button class="btn line" type="button" id="b-cancel">닫기</button></form>');
     var input = $('i-code');
     input.addEventListener('input', function () { input.value = input.value.replace(/\D/g, '').slice(0, 4); });
@@ -174,10 +174,10 @@
       '<button class="btn line" type="button" id="b-camclose">닫기</button></div>');
     $('b-camclose').onclick = Api.closeModal;
     $('b-tonum').onclick = function () { Scanner.stop(); stampForm(); };
-    loadJsQR().then(function () {
-      Scanner.start($('cam'), function (text) { stampWith({ p_text: text }, null, $('e-cam')); },
-        function (msg) { $('e-cam').textContent = msg; });
-    });
+    // 버튼을 누른 바로 그 순간 카메라를 엽니다 (아이폰은 늦게 열면 막습니다). 판독 도구는 함께 불러옵니다.
+    loadJsQR();
+    Scanner.start($('cam'), function (text) { stampWith({ p_text: text }, null, $('e-cam')); },
+      function (msg) { $('e-cam').textContent = msg; $('cam').hidden = true; });
   }
 
   function stampWith(args, btn, errEl) {

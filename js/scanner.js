@@ -6,7 +6,7 @@ var Scanner = (function () {
 
   function start(video, cb, onFail) {
     onFound = cb;
-    if (!supported()) { onFail('이 휴대폰에서는 카메라를 열 수 없습니다.'); return; }
+    if (!supported()) { onFail(why(null)); return; }
     if (!detector && typeof window.BarcodeDetector === 'function') {
       try { detector = new window.BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; }
     }
@@ -16,7 +16,17 @@ var Scanner = (function () {
         var p = video.play(); if (p && p.catch) p.catch(function () {});
         loop(video);
       })
-      .catch(function () { onFail('카메라를 열지 못했습니다. 안내판의 숫자 4자리를 넣어 주십시오.'); });
+      .catch(function (e) { onFail(why(e)); });
+  }
+
+  function inApp() { return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent || ''); }
+
+  function why(e) {
+    var n = e && e.name || '';
+    if (inApp()) return '카카오톡·네이버 안에서는 카메라가 열리지 않습니다. 휴대폰 카메라 앱으로 안내판 QR을 찍거나, 숫자 4자리를 넣어 주십시오.';
+    if (n === 'NotAllowedError' || n === 'SecurityError') return '카메라 사용이 허용되지 않았습니다. 휴대폰 카메라 앱으로 안내판 QR을 찍거나, 숫자 4자리를 넣어 주십시오.';
+    if (n === 'NotReadableError' || n === 'AbortError') return '다른 앱이 카메라를 쓰고 있습니다. 다른 앱을 닫고 다시 눌러 주십시오.';
+    return '카메라를 열지 못했습니다. 휴대폰 카메라 앱으로 안내판 QR을 찍거나, 숫자 4자리를 넣어 주십시오.';
   }
 
   function loop(video) {
