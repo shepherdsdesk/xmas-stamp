@@ -4,12 +4,16 @@ var Api = (function () {
   var NET = '연결이 원활하지 않습니다. 잠시 후 다시 눌러 주십시오.';
 
   function rpc(fn, args) {
-    if (!C.SUPABASE_URL || C.SUPABASE_URL.indexOf('여기에') >= 0) {
+    if (!C.SUPABASE_URL || /여기에|abcdxyz/.test(C.SUPABASE_URL)) {
       return Promise.reject(new Error('js/config.js에 Supabase 연결 정보를 넣어 주십시오.'));
     }
-    return fetch(C.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/rpc/' + fn, {
+    var key = String(C.SUPABASE_ANON_KEY || '').trim();
+    var headers = { 'Content-Type': 'application/json', apikey: key };
+    // 예전 anon 키(eyJ…)만 Authorization에도 넣습니다. 새 sb_publishable_ 키는 apikey에만 넣어야 합니다.
+    if (/^eyJ/.test(key)) headers.Authorization = 'Bearer ' + key;
+    return fetch(String(C.SUPABASE_URL).trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '') + '/rest/v1/rpc/' + fn, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: C.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + C.SUPABASE_ANON_KEY },
+      headers: headers,
       body: JSON.stringify(args || {})
     }).then(function (r) {
       return r.json().catch(function () { return null; }).then(function (j) {
