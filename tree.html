@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로비 화면 · 성탄 말씀 스탬프 여정</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+    .tv { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: 1fr 38vw; }
+    .left { padding: 7vh 6vw; display: flex; flex-direction: column; justify-content: space-between; }
+    .photo { background: url(img/church.jpg) center 30% / cover no-repeat; position: relative; }
+    .photo::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(90deg, var(--bg), rgba(17,27,46,0) 40%); }
+    .tv .label { font-size: 2.2vw; }
+    .tv h1 { font-size: 4vw; margin-top: 1vh; }
+    .tv .sub { font-size: 2.2vw; color: var(--muted); }
+    .verse-box { flex: 1; margin: 4vh 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 2vh; transition: opacity .8s; }
+    .verse-box .t { font-size: 2vw; color: var(--gold); font-weight: 700; }
+    .verse-box .v { font-family: var(--serif); font-size: 2.3vw; line-height: 1.7; }
+    .verse-box .r { font-size: 2vw; color: var(--muted); }
+    .count { display: flex; align-items: baseline; gap: 1.5vw; font-size: 2.4vw; }
+    .count b { font-size: 6vw; color: var(--gold); }
+    #fs { position: fixed; right: 16px; top: 16px; z-index: 5; }
+  </style>
+</head>
+<body>
+  <div class="tv">
+    <div class="left">
+      <div><p class="label" id="church"></p><h1 id="title"></h1><p class="sub" id="sub"></p></div>
+      <div class="verse-box" id="vb"><p class="t" id="vt"></p><p class="v" id="vv"></p><p class="r" id="vr"></p></div>
+      <div class="count"><b id="done">0</b><span>명이 다섯 곳을 모두 다녀오셨습니다</span></div>
+    </div>
+    <div class="photo"></div>
+  </div>
+  <button class="btn line" id="fs" type="button" style="width:auto;min-height:48px;font-size:18px">전체 화면</button>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+  (function () {
+    var $ = Api.$, verses = [], i = 0;
+    function load() {
+      Api.rpc('tree_data').then(function (d) {
+        $('church').textContent = d.church; $('title').textContent = d.title; $('sub').textContent = d.subtitle;
+        $('done').textContent = d.completed;
+        $('done').nextElementSibling.textContent = '명이 모든 장소를 다녀오셨습니다';
+        verses = d.verses.length ? d.verses : [{ title: '', verse: d.motto, ref: '' }];
+        if (!$('vv').textContent) next();
+      }).catch(function () {});
+    }
+    function next() {
+      if (!verses.length) return;
+      var v = verses[i++ % verses.length], box = $('vb');
+      box.style.opacity = 0;
+      setTimeout(function () { $('vt').textContent = v.title; $('vv').textContent = v.verse; $('vr').textContent = v.ref; box.style.opacity = 1; }, 800);
+    }
+    load(); setInterval(load, 30000); setInterval(next, 15000);
+    $('fs').onclick = function () {
+      var el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (f) f.call(el); this.hidden = true;
+    };
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>선물 확인 · 성탄 말씀 스탬프 여정</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <section id="g-login" class="wrap stack" hidden>
+    <p class="label">봉사자</p><h1>선물 확인</h1>
+    <div class="field"><label for="g-pin">봉사자 PIN</label><input id="g-pin" class="input" type="password" inputmode="numeric"></div>
+    <p class="err" id="g-err"></p>
+    <button class="btn" id="g-in" type="button">들어가기</button>
+  </section>
+
+  <section id="g-main" class="wrap stack" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center"><h1>선물 확인</h1><button class="link" id="g-lock" type="button">잠그기</button></div>
+    <div class="card stack">
+      <div class="field"><label for="q-code">교환권 번호</label><input id="q-code" class="input" maxlength="9" autocomplete="off" placeholder="예) ABCD-2345" style="text-transform:uppercase;letter-spacing:2px"></div>
+      <p class="muted center">또는</p>
+      <div class="field"><label for="q-name">이름</label><input id="q-name" class="input" maxlength="20"></div>
+      <div class="field"><label for="q-l4">휴대폰 번호 뒷자리 4자리</label><input id="q-l4" class="input" inputmode="numeric" maxlength="4"></div>
+      <p class="err" id="q-err"></p>
+      <button class="btn" id="q-go" type="button">찾기</button>
+    </div>
+    <div id="results" class="stack"></div>
+  </section>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+  (function () {
+    var $ = Api.$, esc = Api.esc, KEY = 'hcc_stamp_gift', pin = null;
+    try { pin = sessionStorage.getItem(KEY); } catch (e) {}
+    function show(id) { $('g-login').hidden = id !== 'g-login'; $('g-main').hidden = id !== 'g-main'; }
+    function lock() { pin = null; try { sessionStorage.removeItem(KEY); } catch (e) {} show('g-login'); }
+    function login() {
+      var p = $('g-pin').value.trim(), b = $('g-in'); Api.busy(b, true);
+      Api.rpc('gift_login', { p_pin: p }).then(function (r) {
+        Api.busy(b, false);
+        if (!r.ok) { $('g-err').textContent = r.message; return; }
+        pin = p; try { sessionStorage.setItem(KEY, p); } catch (e) {} show('g-main');
+      }).catch(function (e) { Api.busy(b, false); $('g-err').textContent = e.message; });
+    }
+    $('g-in').onclick = login;
+    $('g-pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+    $('g-lock').onclick = lock;
+    $('q-code').addEventListener('input', function () {
+      var v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      this.value = v.length > 4 ? v.slice(0, 4) + '-' + v.slice(4) : v;
+    });
+    function find() {
+      var b = $('q-go'); $('q-err').textContent = '';
+      Api.busy(b, true);
+      Api.rpc('gift_lookup', { p_pin: pin, p_code: $('q-code').value, p_name: $('q-name').value, p_last4: $('q-l4').value }).then(function (r) {
+        Api.busy(b, false);
+        if (!r.ok) { if (/PIN/.test(r.message)) lock(); $('q-err').textContent = r.message; return; }
+        render(r.items);
+      }).catch(function (e) { Api.busy(b, false); $('q-err').textContent = e.message; });
+    }
+    $('q-go').onclick = find;
+    function render(items) {
+      var box = $('results');
+      if (!items.length) { box.innerHTML = '<div class="card"><p>찾는 분이 없습니다. 번호나 이름을 다시 확인해 주십시오.</p></div>'; return; }
+      box.innerHTML = items.map(function (p, i) {
+        var st = !p.done ? '<span class="badge dim">미완주 ' + p.count + ' / ' + p.total + '</span>'
+          : p.gift ? '<span class="badge ok">이미 받음</span>' : '<span class="badge gold">완주 · 선물 드릴 차례</span>';
+        return '<div class="card stack-8"><h2>' + esc(p.name) + '</h2><p class="muted">' + esc(p.phone) + ' · ' + esc(p.receipt) + (p.voucher ? ' · ' + esc(p.voucher) : '') + '</p>' +
+          '<p>' + st + '</p>' + (p.done && !p.gift ? '<button class="btn" data-i="' + i + '" type="button">선물 전달 완료</button>' : '') + '</div>';
+      }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('[data-i]'), function (b) {
+        b.onclick = function () {
+          var p = items[Number(b.getAttribute('data-i'))];
+          if (!confirm(p.name + ' 님께 선물을 드렸습니까?')) return;
+          Api.busy(b, true);
+          Api.rpc('gift_redeem', { p_pin: pin, p_id: p.id }).then(function (r) {
+            Api.busy(b, false); Api.toast(r.message, 3000);
+            if (r.ok) { box.innerHTML = '<div class="card center"><h2>' + esc(r.message) + '</h2></div>'; $('q-code').value = ''; $('q-name').value = ''; $('q-l4').value = ''; }
+          }).catch(function (e) { Api.busy(b, false); Api.toast(e.message); });
+        };
+      });
+    }
+    if (pin) Api.rpc('gift_login', { p_pin: pin }).then(function (r) { if (r.ok) show('g-main'); else lock(); }).catch(function () { show('g-login'); });
+    else show('g-login');
+  })();
+  </script>
+</body>
+</html>

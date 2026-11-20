@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>관리자 · 성탄 말씀 스탬프 여정</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body { font-size: 18px; }
+    .admin { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
+    .tabs button { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; font-weight: 700; cursor: pointer; }
+    .tabs button.on { background: var(--gold); color: #1a1406; border-color: var(--gold); }
+    .tabs .dot { display: inline-block; min-width: 24px; padding: 0 8px; margin-left: 8px; border-radius: 12px; background: var(--alert); color: #2a0b06; font-size: 14px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+    .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+    .tile .k { color: var(--muted); font-weight: 700; }
+    .tile .v { font-size: 36px; font-weight: 800; line-height: 1.2; }
+    .tile.alert { border-color: var(--alert); }
+    .tile.alert .v { color: var(--alert); }
+    .rows { display: grid; gap: 8px; }
+    .row { display: grid; grid-template-columns: 200px 1fr 56px; gap: 16px; align-items: center; }
+    .row .track { height: 12px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+    .row .track i { display: block; height: 100%; background: var(--gold); }
+    .row .n { text-align: right; font-weight: 800; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .form { display: grid; grid-template-columns: 160px 1fr; gap: 12px 16px; align-items: center; }
+    .form > label { font-weight: 700; color: var(--muted); }
+    .form .input, .form .textarea, .form .select { min-height: 48px; font-size: 18px; padding: 8px 12px; }
+    .form .textarea { min-height: 96px; }
+    .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .acts .btn { width: auto; min-height: 48px; font-size: 18px; padding: 0 24px; margin: 0; }
+    .pcard { display: grid; grid-template-columns: 200px 1fr; gap: 24px; }
+    .pcard .ph { width: 200px; aspect-ratio: 4 / 3; border-radius: 12px; background: var(--surface-2) center / cover no-repeat;
+      display: flex; align-items: center; justify-content: center; color: var(--dim); text-align: center; font-size: 16px; }
+    .pcard.off { opacity: .55; }
+    .pr { border-left: 6px solid var(--line); }
+    .pr.crisis { border-left-color: var(--alert); }
+    .pr.care { border-left-color: var(--gold); }
+    .pr .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); }
+    @media (max-width: 640px) { .form { grid-template-columns: 1fr; } .pcard { grid-template-columns: 1fr; } .row { grid-template-columns: 110px 1fr 40px; } }
+
+    /* 안내판 인쇄 */
+    #print-area { display: none; }
+    .sign { width: 190mm; min-height: 270mm; margin: 0 auto; padding: 14mm 12mm; background: #fff; color: #141c2c; text-align: center;
+      font-family: var(--sans); display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 6mm; page-break-after: always; break-after: page; }
+    .sign .s-church { font-size: 16pt; font-weight: 700; color: #8a6412; }
+    .sign .s-title { font-size: 24pt; font-weight: 800; }
+    .sign .s-no { font-size: 80pt; font-weight: 900; line-height: 1.1; }
+    .sign .s-scene { font-size: 18pt; color: #4a5468; }
+    .sign .s-box { width: 100%; border: 3pt solid #c99a3a; background: #fff4cc; padding: 6mm 0; }
+    .sign .s-box b { display: block; font-size: 16pt; color: #8a6412; }
+    .sign .s-box span { display: block; font-size: 84pt; font-weight: 900; letter-spacing: 10mm; padding-left: 10mm; line-height: 1.15; }
+    .sign .s-how { font-size: 17pt; font-weight: 700; line-height: 1.7; }
+    .sign .s-qr { display: flex; align-items: center; gap: 6mm; text-align: left; font-size: 12pt; color: #4a5468; }
+    .sign .s-qr svg { width: 34mm; height: 34mm; }
+    .sign .s-qr b { color: #141c2c; font-size: 13pt; }
+    .preview .sign { transform: scale(.5); transform-origin: top center; margin-bottom: -135mm; box-shadow: 0 0 0 1px #ccc; }
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { background: #fff; }
+      body > *:not(#print-area) { display: none !important; }
+      #print-area { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin">
+    <!-- 처음 설치: PIN 정하기 -->
+    <section id="a-setup" hidden class="wrap stack">
+      <h1>처음 설정</h1>
+      <p class="muted">관리자 PIN과 봉사자(선물 확인) PIN을 정해 주십시오. 한 번 정하면 이 화면은 다시 나오지 않습니다.</p>
+      <div class="field"><label for="su-a">관리자 PIN (6자리 이상)</label><input id="su-a" class="input" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="su-g">봉사자 PIN (4자리 이상)</label><input id="su-g" class="input" type="password" autocomplete="new-password"></div>
+      <p class="err" id="su-e"></p>
+      <button class="btn" id="su-b" type="button">정하기</button>
+    </section>
+
+    <!-- 로그인 -->
+    <section id="a-login" hidden class="wrap stack">
+      <h1>관리자</h1>
+      <div class="field"><label for="lg-p">관리자 PIN</label><input id="lg-p" class="input" type="password" autocomplete="current-password"></div>
+      <p class="err" id="lg-e"></p>
+      <button class="btn" id="lg-b" type="button">들어가기</button>
+    </section>
+
+    <!-- 본 화면 -->
+    <section id="a-main" hidden>
+      <div class="top">
+        <div><p class="label" id="m-church"></p><h1>관리자</h1></div>
+        <div class="acts" style="margin:0"><button class="btn quiet" id="m-refresh" type="button">새로고침</button><button class="btn line" id="m-lock" type="button">잠그기</button></div>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button data-t="stats" class="on" type="button">현황</button>
+        <button data-t="care" type="button">돌봄 요청<span class="dot" id="care-dot" hidden></span></button>
+        <button data-t="places" type="button">장소</button>
+        <button data-t="answers" type="button">기도 말씀</button>
+        <button data-t="people" type="button">참가자</button>
+        <button data-t="signs" type="button">안내판 인쇄</button>
+        <button data-t="settings" type="button">설정</button>
+      </nav>
+      <div id="t-stats"></div>
+      <div id="t-care" hidden></div>
+      <div id="t-places" hidden></div>
+      <div id="t-answers" hidden></div>
+      <div id="t-people" hidden></div>
+      <div id="t-signs" hidden></div>
+      <div id="t-settings" hidden></div>
+    </section>
+  </div>
+  <div id="print-area"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/vendor/qrcodegen.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
