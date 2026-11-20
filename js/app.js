@@ -252,8 +252,10 @@
       '<p class="ref">' + esc(b.ref) + '</p>' + (b.verse ? '<p class="verse">' + Api.nl(b.verse) + '</p>' : '') + '</div>' +
       (b.blessing ? '<div class="card stack-8"><p class="label">함께 드리는 기도</p><p>' + Api.nl(b.blessing) + '</p></div>' : '') +
       (b.notice ? '<p class="notice">' + Api.nl(b.notice) + '</p>' : '') +
+      (window.CardMaker ? '<button class="btn quiet" type="button" id="b-bcard">말씀 카드 이미지로 저장</button>' : '') +
       '<button class="btn" type="button" id="b-bok">확인</button></div>');
     $('b-bok').onclick = Api.closeModal;
+    if ($('b-bcard')) $('b-bcard').onclick = function () { CardMaker.open(me.name, b, cfg || {}); };
   }
 
   function switchUser() {

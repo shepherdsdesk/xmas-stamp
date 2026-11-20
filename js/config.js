@@ -4,6 +4,6 @@
    anon(public) 키는 공개되어도 괜찮은 키입니다. (service_role 키는 절대 넣지 마십시오)
    ============================================================ */
 window.STAMP_CONFIG = {
-  SUPABASE_URL: 'https://yvjpkmikuyehgrjhbudq.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_InS3tBmKxVvltMf24l6jeQ_-nvyia9R'
+  SUPABASE_URL: 'https://여기에-프로젝트-주소.supabase.co',
+  SUPABASE_ANON_KEY: '여기에-anon-public-키'
 };
