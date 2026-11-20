@@ -301,7 +301,35 @@
       '<div class="s-no">스탬프 ' + p.no + '</div><div class="s-scene">' + esc(p.title) + '</div>' +
       '<div class="s-box"><b>스탬프 숫자</b><span>' + esc(p.code) + '</span></div>' +
       '<div class="s-how">① 휴대폰 화면 아래 [스탬프 찍기]를 누르십시오<br>② 위의 숫자 4자리를 넣으십시오</div>' +
-      '<div class="s-qr">' + qrSvg(stationUrl(p)) + '<div><b>휴대폰 카메라로 이 QR을 찍어도 됩니다.</b><br>궁금한 점은 ' + esc(s.contact || '') + '에게 연락해 주십시오.</div></div></div>';
+      '<div class="s-qr">' + qrSvg(stationUrl(p)) + '<div><b>휴대폰 카메라로 이 QR을 찍어도 됩니다.</b>' +
+      (nfcOn() ? '<br><b>휴대폰을 오른쪽 표시에 대어도 됩니다.</b>' : '') +
+      '<br>궁금한 점은 ' + esc(s.contact || '') + '에게 연락해 주십시오.</div>' +
+      (nfcOn() ? '<div class="s-nfc">여기에<br>휴대폰을<br>대세요</div>' : '') + '</div></div>';
+  }
+  function nfcOn() { try { return localStorage.getItem('hcc_stamp_nfc') === 'Y'; } catch (e) { return false; } }
+  function copyText(t, btn) {
+    function ok() { var o = btn.textContent; btn.textContent = '복사했습니다'; setTimeout(function () { btn.textContent = o; }, 1500); }
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(ok, fallback); } else fallback();
+    function fallback() {
+      var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.position = 'fixed'; a.style.opacity = '0';
+      document.body.appendChild(a); a.select(); try { document.execCommand('copy'); ok(); } catch (e) { window.prompt('길게 눌러 복사해 주십시오', t); } a.remove();
+    }
+  }
+  function nfcHtml(act) {
+    return '<div class="card stack-8" style="margin-top:24px"><h2>NFC 스티커 (휴대폰을 대면 찍히는 방법)</h2>' +
+      '<p class="muted small">이 화면을 <b>휴대폰</b>으로 열고, 장소마다 [주소 복사] → NFC Tools 앱에서 써 넣습니다.</p>' +
+      '<ol class="small" style="margin:0;padding-left:24px;line-height:1.8">' +
+      '<li>NFC Tools → <b>쓰기</b> → <b>레코드 추가</b> → <b>URL / URI</b></li>' +
+      '<li>주소 칸에 붙여 넣습니다. 앞에 <b>https://</b>가 두 번 들어가지 않았는지 확인하십시오</li>' +
+      '<li><b>확인</b> → <b>쓰기</b> → 스티커에 휴대폰을 댑니다</li>' +
+      '<li>다 쓰면 다른 휴대폰을 대어 스탬프가 찍히는지 확인합니다 (확인한 기록은 리허설 후 지우십시오)</li></ol>' +
+      '<p class="muted small">장소의 [QR 새로 만들기]를 누르면 주소가 바뀌어 <b>스티커도 다시 써야</b> 합니다. 다른 사람이 덮어쓰지 못하게 하려면 NFC Tools의 <b>기타 → 비밀번호 설정</b>을 쓰십시오. (<b>영구 잠금</b>은 되돌릴 수 없으니 쓰지 마십시오)</p>' +
+      '<table><thead><tr><th>장소</th><th>주소</th><th></th></tr></thead><tbody>' +
+      act.map(function (p) {
+        return '<tr><td>' + p.no + '. ' + esc(p.name) + '</td><td class="small" style="word-break:break-all">' + esc(stationUrl(p)) + '</td>' +
+          '<td><button class="btn quiet" style="width:auto;min-height:44px;font-size:16px;padding:0 16px;margin:0" type="button" data-copy="' + esc(stationUrl(p)) + '">주소 복사</button></td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<label class="choice" style="margin-top:8px"><input type="checkbox" id="sg-nfc"' + (nfcOn() ? ' checked' : '') + '> <span>안내판에 "휴대폰을 대세요" 표시 넣기 (스티커를 붙일 때만)</span></label></div>';
   }
   function startHtml(s) {
     return '<div class="sign"><div class="s-church">' + esc(s.church || '') + '</div><div class="s-title">' + esc(s.title || '') + '</div>' +
@@ -317,7 +345,10 @@
       '<p class="muted small">인쇄 전에 휴대폰으로 QR을 한 번씩 찍어 확인해 주십시오. 장소의 숫자나 QR을 바꾸면 다시 인쇄해야 합니다.</p>' +
       '<p class="muted small">시작 QR 주소: ' + esc(siteBase()) + '</p>' +
       '<div class="acts"><button class="btn" id="sg-print" type="button">인쇄하기</button></div></div>' +
+      nfcHtml(act) +
       '<div class="preview" style="margin-top:24px">' + all + '</div>';
     $('sg-print').onclick = function () { window.print(); };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (b) { b.onclick = function () { copyText(b.getAttribute('data-copy'), b); }; });
+    $('sg-nfc').onchange = function () { try { localStorage.setItem('hcc_stamp_nfc', this.checked ? 'Y' : 'N'); } catch (e) {} renderSigns(); };
   }
 })();
