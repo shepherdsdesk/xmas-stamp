@@ -47,15 +47,16 @@
 
     /* 안내판 인쇄 */
     #print-area { display: none; }
-    .sign { width: 190mm; min-height: 270mm; margin: 0 auto; padding: 14mm 12mm; background: #fff; color: #141c2c; text-align: center;
-      font-family: var(--sans); display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 6mm; page-break-after: always; break-after: page; }
+    .sign { width: 190mm; height: 270mm; margin: 0 auto; padding: 10mm 12mm 6mm; box-sizing: border-box; overflow: hidden; background: #fff; color: #141c2c; text-align: center;
+      font-family: var(--sans); display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 4mm; page-break-after: always; break-after: page; }
+    .sign .s-pic { width: 100%; height: 56mm; flex: 0 0 56mm; display: block; }
     .sign .s-church { font-size: 16pt; font-weight: 700; color: #8a6412; }
     .sign .s-title { font-size: 24pt; font-weight: 800; }
-    .sign .s-no { font-size: 80pt; font-weight: 900; line-height: 1.1; }
+    .sign .s-no { font-size: 66pt; font-weight: 900; line-height: 1.1; }
     .sign .s-scene { font-size: 18pt; color: #4a5468; }
     .sign .s-box { width: 100%; border: 3pt solid #c99a3a; background: #fff4cc; padding: 6mm 0; }
     .sign .s-box b { display: block; font-size: 16pt; color: #8a6412; }
-    .sign .s-box span { display: block; font-size: 84pt; font-weight: 900; letter-spacing: 10mm; padding-left: 10mm; line-height: 1.15; }
+    .sign .s-box span { display: block; font-size: 74pt; font-weight: 900; letter-spacing: 10mm; padding-left: 10mm; line-height: 1.15; }
     .sign .s-how { font-size: 17pt; font-weight: 700; line-height: 1.7; }
     .sign .s-qr { display: flex; align-items: center; gap: 6mm; text-align: left; font-size: 12pt; color: #4a5468; }
     .sign .s-qr svg { width: 34mm; height: 34mm; }
@@ -123,6 +124,7 @@
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/vendor/qrcodegen.js"></script>
+  <script src="js/scenes.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>
