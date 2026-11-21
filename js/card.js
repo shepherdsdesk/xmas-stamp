@@ -42,7 +42,7 @@ var CardMaker = (function () {
         m.font = font; blocks.push({ lines: wrap(m, text, maxW), font: font, color: color, lh: lh, gap: gap });
       }
       add(cfg.title || '성탄 말씀 스탬프 여정', '700 34px ' + SANS, '#e6c06a', 48, 0);
-      add(name + ' 님과 함께 묵상할 말씀', '800 56px ' + SANS, '#ffffff', 76, 16);
+      add(name + ' 님께 드리는 하나님의 말씀', '800 56px ' + SANS, '#ffffff', 76, 16);
       add(b.ref, '800 42px ' + SANS, '#e6c06a', 58, 56);
       add(b.verse, '500 40px ' + SERIF, '#f7f2e6', 66, 16);
       if (b.blessing) {

@@ -47,7 +47,7 @@
     b.onclick = function () {
       tab = b.getAttribute('data-t');
       Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (x) { x.classList.toggle('on', x === b); });
-      ['stats', 'care', 'places', 'answers', 'people', 'signs', 'settings'].forEach(function (t) { $('t-' + t).hidden = t !== tab; });
+      ['stats', 'care', 'shares', 'places', 'answers', 'people', 'signs', 'settings'].forEach(function (t) { $('t-' + t).hidden = t !== tab; });
       load();
     };
   });
@@ -62,6 +62,7 @@
     if (tab === 'stats') loadStats();
     else if (tab === 'care') loadCare('care');
     else if (tab === 'people') loadPeople('');
+    else if (tab === 'shares') loadShares();
     else loadData();
   }
   function badge() {
@@ -126,6 +127,29 @@
     }).catch(function (e) { Api.toast(e.message); });
   }
 
+  /* ---------- 한 줄 나눔 (로비 TV 트리) ---------- */
+  function loadShares() {
+    var box = $('t-shares');
+    box.innerHTML = '<p class="muted" style="margin-bottom:16px">성도가 스탬프를 받고 남긴 한 줄 나눔입니다. 이름 없이 내용만 로비 TV 성탄 트리에 걸립니다. ' +
+      '전화번호·주소처럼 보이는 글과 마음이 힘든 신호가 있는 글은 자동으로 숨겨지고, 힘든 신호가 있는 글은 [돌봄 요청]에도 올라갑니다.</p><div id="sh-list" class="stack"><p class="muted">불러오는 중입니다</p></div>';
+    rpc('admin_shares', { p_pin: pin }).then(function (r) {
+      if (!guard(r)) return;
+      var list = $('sh-list');
+      if (!r.items.length) { list.innerHTML = '<p class="muted">아직 나눔이 없습니다.</p>'; return; }
+      list.innerHTML = r.items.map(function (it) {
+        return '<div class="card pr stack-8' + (it.visible ? '' : ' care') + '"><div class="meta"><span class="badge ' + (it.visible ? 'ok' : 'dim') + '">' + (it.visible ? '트리에 보임' : '숨김') + '</span>' +
+          '<span class="badge dim">' + it.loc + '번 장소</span><b>' + esc(it.name || '') + '</b><span class="muted">' + esc(it.at) + '</span></div>' +
+          '<p>' + esc(it.text) + '</p><div class="acts"><button class="btn quiet" type="button" data-vis="' + it.id + '" data-to="' + (!it.visible) + '">' + (it.visible ? '트리에서 숨기기' : '트리에 보이기') + '</button></div></div>';
+      }).join('');
+      Array.prototype.forEach.call(list.querySelectorAll('[data-vis]'), function (b) {
+        b.onclick = function () {
+          rpc('admin_share_visible', { p_pin: pin, p_id: Number(b.getAttribute('data-vis')), p_visible: b.getAttribute('data-to') === 'true' })
+            .then(function (r) { if (guard(r)) { Api.toast(r.message); loadShares(); } });
+        };
+      });
+    }).catch(function (e) { Api.toast(e.message); });
+  }
+
   /* ---------- 장소·기도 말씀·설정·안내판 (같은 자료 사용) ---------- */
   function loadData() {
     rpc('admin_data', { p_pin: pin }).then(function (d) {
@@ -163,6 +187,7 @@
       '<label>성탄 장면</label><input class="input" data-k="title" value="' + esc(p.title) + '" maxlength="80" placeholder="예: 사랑 · 구유에 누인 아기">' +
       '<label>말씀 출처</label><input class="input" data-k="ref" value="' + esc(p.ref) + '" maxlength="40" placeholder="예: 눅 2:7">' +
       '<label>말씀 본문</label><textarea class="textarea" data-k="verse" maxlength="1000">' + esc(p.verse) + '</textarea>' +
+      '<label>한 줄 나눔 질문</label><input class="input" data-k="question" value="' + esc(p.question || '') + '" maxlength="80" placeholder="비우면 이 장소에서는 나눔을 받지 않습니다">' +
       '<label>안내판 숫자</label><input class="input" data-k="code" value="' + esc(p.code) + '" maxlength="4" inputmode="numeric" style="max-width:160px;font-weight:800;letter-spacing:4px">' +
       '</div><div class="acts"><button class="btn" type="button" data-save>저장</button><button class="btn quiet" type="button" data-newqr>QR 새로 만들기</button></div></div></div>';
   }
@@ -239,6 +264,8 @@
     ['title', '행사 이름'], ['subtitle', '부제'], ['church', '교회·교구'], ['motto', '표어'],
     ['active', '행사 진행', 'yn'], ['start_at', '시작 일시', '', '예: 2026-12-06 09:00 (비우면 바로 시작)'], ['end_at', '마감 일시', '', '예: 2026-12-31 23:59'],
     ['show_names', '장소 이름 보이기', 'yn', 'N이면 사진과 장면만 보이고, 스탬프를 받은 뒤에 이름이 보입니다'],
+    ['share_auto', '나눔 바로 트리에 걸기', 'yn'],
+    ['prayer_required', '기도제목 필수', 'yn'],
     ['gift_note', '선물 안내', 'area'], ['contact', '문의처'], ['retention', '개인정보 보관 기한'],
     ['crisis_msg', '위기 안내 문구', 'area'], ['crisis_extra', '위기 단어 추가', '', '쉼표로 구분']
   ];
@@ -255,7 +282,7 @@
       '<label>새 봉사자 PIN</label><input class="input" id="pin-g" type="password" placeholder="바꾸지 않으려면 비워 두십시오"></div>' +
       '<div class="acts"><button class="btn quiet" id="pin-save" type="button">PIN 바꾸기</button></div></div>' +
       '<div class="card stack" style="margin-top:16px;border-color:var(--alert)"><h3>리허설 기록 지우기</h3>' +
-      '<p class="muted">참가자, 스탬프, 기도제목을 모두 지웁니다. 장소·말씀·설정은 그대로 남습니다. 행사 시작 전에만 쓰십시오.</p>' +
+      '<p class="muted">참가자, 스탬프, 기도제목, 한 줄 나눔을 모두 지웁니다. 장소·말씀·설정은 그대로 남습니다. 행사 시작 전에만 쓰십시오.</p>' +
       '<div class="form"><label>확인</label><input class="input" id="rs-w" placeholder="초기화 라고 입력"></div>' +
       '<div class="acts"><button class="btn line" id="rs-b" type="button">모두 지우기</button></div></div>';
     $('st-save').onclick = function () {

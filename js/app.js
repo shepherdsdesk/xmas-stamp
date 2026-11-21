@@ -185,15 +185,22 @@
   }
 
   function doneBlock(s) {
+    var locked = s.prayerRequired && !s.prayerDone;
     var h = '<div class="card gold celebrate stack-8">' + starSvg() + '<h2 class="big-title">완주를 축하합니다</h2>' +
       '<p class="muted">별을 따라 베들레헴까지 ' + countWord(s.total) + ' 곳을 모두 다녀오셨습니다.</p></div>';
+    if (locked) {
+      h += '<div class="card gold center stack-8">' + giftSvg() + '<p class="label">마지막 순서 · 보배합 열기</p><h3>성탄 감사와 새해 기도제목</h3>' +
+        '<p class="muted small">동방 박사들이 보배합을 열었듯, 한 해의 감사와 새해 기도제목을 나눠 주십시오. 기도제목을 나누시면 <b>선물 교환권</b>이 나옵니다.</p>' +
+        '<button class="btn" id="b-pray" type="button">기도제목 나누기</button></div>';
+      return h;
+    }
     h += '<div class="ticket' + (s.giftReceived ? ' used' : '') + '">' + (s.giftReceived ? '<div class="t-done">선물 받음</div>' : '') +
       '<div class="t-label">선물 교환권</div><div class="t-code">' + esc(s.voucher) + '</div>' +
       '<div class="barcode">' + barcodeSvg(s.voucher) + '</div>' +
       '<p>' + (s.giftReceived ? '선물을 받으셨습니다. 함께해 주셔서 감사합니다.' : esc(cfg.giftNote)) + '</p></div>';
-    if (s.prayerDone) h += '<button class="btn quiet" id="b-word" type="button">함께 묵상할 말씀 다시 보기</button>';
+    if (s.prayerDone) h += '<button class="btn quiet" id="b-word" type="button">하나님의 말씀 다시 보기</button>';
     else h += '<div class="card gold center stack-8">' + giftSvg() + '<p class="label">보배합 열기</p><h3>성탄 감사와 새해 기도제목</h3>' +
-      '<p class="muted small">동방 박사들이 보배합을 열었듯, 한 해의 감사와 새해 기도제목을 나눠 주십시오. 교구가 함께 기도합니다. (선택)</p>' +
+      '<p class="muted small">동방 박사들이 보배합을 열었듯, 한 해의 감사와 새해 기도제목을 나눠 주십시오. 교구가 함께 기도합니다.</p>' +
       '<button class="btn" id="b-pray" type="button">기도제목 나누기</button></div>';
     return h;
   }
@@ -286,9 +293,27 @@
       '<h2 class="big-title">' + (done ? '성탄 표어를 완성했습니다' : fresh ? p.no + '번 별을 찾았습니다' : esc(r.message)) + '</h2></div>' +
       motto + '<div class="card">' + progressHtml(me) + '</div>' +
       (p.verse ? '<div class="card gold stack-8"><p class="label">오늘의 묵상</p><p class="ref">' + esc(p.ref) + '</p><p class="verse">' + Api.nl(p.verse) + '</p></div>' : '') +
-      (done ? '<div class="card stack-8 center"><h3>모든 별을 찾으셨습니다</h3><p class="muted small">선물 교환권이 내 별 여정 화면에 나옵니다.</p></div>' : '') +
+      (p.question && !p.shared ? '<div class="card stack-8" id="sh-card"><p class="label">한 줄 나눔 (선택)</p><h3>' + esc(p.question) + '</h3>' +
+        '<textarea id="sh-in" class="textarea" maxlength="60" style="min-height:104px" placeholder="60자 안으로 적어 주십시오"></textarea>' +
+        '<p class="muted small" style="text-align:right"><span id="sh-n">0</span> / 60</p>' +
+        '<p class="muted small">이름 없이 내용만 로비 성탄 트리 화면에 별로 걸립니다. 기도제목은 완주한 뒤 따로 받습니다.</p>' +
+        '<p class="err" id="sh-e" role="alert"></p><button class="btn quiet" type="button" id="sh-b">트리에 걸기</button></div>' : '') +
+      (done ? '<div class="card stack-8 center"><h3>모든 별을 찾으셨습니다</h3><p class="muted small">' + (me.prayerRequired && !me.prayerDone ? '이제 마지막으로 기도제목을 나눠 주십시오. 나누시면 선물 교환권이 나옵니다.' : '선물 교환권이 내 별 여정 화면에 나옵니다.') + '</p></div>' : '') +
       '<button class="btn" type="button" id="b-ok">확인</button></div>', { dismiss: false });
     $('b-ok').onclick = function () { Api.closeModal(); if (done && !me.prayerDone) prayerForm(); };
+    if ($('sh-b')) {
+      $('sh-in').oninput = function () { $('sh-n').textContent = this.value.length; };
+      $('sh-b').onclick = function () {
+        var t = $('sh-in').value.trim(), btn = $('sh-b');
+        if (t.length < 2) { $('sh-e').textContent = '나눔을 적어 주십시오.'; return; }
+        Api.busy(btn, true, '보내는 중입니다');
+        Api.rpc('add_share', { p_token: Api.getToken(), p_loc: p.no, p_text: t }).then(function (r) {
+          Api.busy(btn, false);
+          if (!r.ok) { $('sh-e').textContent = r.message; return; }
+          $('sh-card').innerHTML = '<p class="label">한 줄 나눔</p><p>' + esc(r.message) + '</p>';
+        }).catch(function (e) { Api.busy(btn, false); $('sh-e').textContent = e.message; });
+      };
+    }
   }
 
   /* ---------- 기도제목 ---------- */
@@ -305,7 +330,7 @@
       }).join('') + '</div>' +
       '<p class="err" id="e-pray" role="alert"></p>' +
       '<button class="btn" type="submit" id="b-praysend">나누기</button>' +
-      '<button class="btn line" type="button" id="b-praylater">다음에 하기</button></form>', { dismiss: false });
+      '<button class="btn line" type="button" id="b-praylater">' + (me.prayerRequired ? '조금 뒤에 쓰기' : '다음에 하기') + '</button></form>', { dismiss: false });
     var radios = document.querySelectorAll('input[name=care]');
     Array.prototype.forEach.call(radios, function (r) {
       r.onchange = function () { Array.prototype.forEach.call(radios, function (x) { x.parentNode.classList.toggle('on', x.checked); }); };
@@ -331,7 +356,7 @@
     Api.openModal(
       '<div class="stack">' +
       (message ? '<p class="center">' + esc(message) + '</p>' : '') +
-      '<div class="card paper stack-8"><p class="label">' + esc(me.name) + ' 님과 함께 묵상할 말씀</p>' +
+      '<div class="card paper stack-8"><p class="label">' + esc(me.name) + ' 님께 드리는 하나님의 말씀</p>' +
       '<p class="ref">' + esc(b.ref) + '</p>' + (b.verse ? '<p class="verse">' + Api.nl(b.verse) + '</p>' : '') + '</div>' +
       (b.blessing ? '<div class="card stack-8"><p class="label">함께 드리는 기도</p><p>' + Api.nl(b.blessing) + '</p></div>' : '') +
       (b.notice ? '<p class="notice">' + Api.nl(b.notice) + '</p>' : '') +

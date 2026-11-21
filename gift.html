@@ -67,9 +67,11 @@
       if (!items.length) { box.innerHTML = '<div class="card"><p>찾는 분이 없습니다. 번호나 이름을 다시 확인해 주십시오.</p></div>'; return; }
       box.innerHTML = items.map(function (p, i) {
         var st = !p.done ? '<span class="badge dim">미완주 ' + p.count + ' / ' + p.total + '</span>'
-          : p.gift ? '<span class="badge ok">이미 받음</span>' : '<span class="badge gold">완주 · 선물 드릴 차례</span>';
+          : p.gift ? '<span class="badge ok">이미 받음</span>'
+          : p.prayed === false ? '<span class="badge alert">기도제목을 아직 나누지 않음</span><br><span class="muted small">휴대폰 화면 아래 [기도제목 나누기]를 먼저 해 주시도록 안내해 주십시오.</span>'
+          : '<span class="badge gold">완주 · 선물 드릴 차례</span>';
         return '<div class="card stack-8"><h2>' + esc(p.name) + '</h2><p class="muted">' + esc(p.phone) + ' · ' + esc(p.receipt) + (p.voucher ? ' · ' + esc(p.voucher) : '') + '</p>' +
-          '<p>' + st + '</p>' + (p.done && !p.gift ? '<button class="btn" data-i="' + i + '" type="button">선물 전달 완료</button>' : '') + '</div>';
+          '<p>' + st + '</p>' + (p.done && !p.gift && p.prayed !== false ? '<button class="btn" data-i="' + i + '" type="button">선물 전달 완료</button>' : '') + '</div>';
       }).join('');
       Array.prototype.forEach.call(box.querySelectorAll('[data-i]'), function (b) {
         b.onclick = function () {
