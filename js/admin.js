@@ -323,7 +323,9 @@
     for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (q.getModule(x, y)) d += 'M' + (x + b) + ',' + (y + b) + 'h1v1h-1z';
     return '<svg viewBox="0 0 ' + (n + 2 * b) + ' ' + (n + 2 * b) + '" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
   }
-  function signHtml(p, s) {
+  function bgOn() { try { return localStorage.getItem('hcc_stamp_bg') !== 'N'; } catch (e) { return true; } }
+  function bgHtml(key) { return (bgOn() && window.Scenes) ? Scenes.svg(key) : ''; }
+  function signHtml(p, s, i) {
     return '<div class="sign"><div class="s-church">' + esc(s.church || '') + '</div><div class="s-title">' + esc(s.title || '') + '</div>' +
       '<div class="s-no">스탬프 ' + p.no + '</div><div class="s-scene">' + esc(p.title) + '</div>' +
       '<div class="s-box"><b>스탬프 숫자</b><span>' + esc(p.code) + '</span></div>' +
@@ -331,7 +333,7 @@
       '<div class="s-qr">' + qrSvg(stationUrl(p)) + '<div><b>휴대폰 카메라로 이 QR을 찍어도 됩니다.</b>' +
       (nfcOn() ? '<br><b>휴대폰을 오른쪽 표시에 대어도 됩니다.</b>' : '') +
       '<br>궁금한 점은 ' + esc(s.contact || '') + '에게 연락해 주십시오.</div>' +
-      (nfcOn() ? '<div class="s-nfc">여기에<br>휴대폰을<br>대세요</div>' : '') + '</div></div>';
+      (nfcOn() ? '<div class="s-nfc">여기에<br>휴대폰을<br>대세요</div>' : '') + '</div>' + bgHtml(window.Scenes ? Scenes.pick(p, i) : '') + '</div>';
   }
   function nfcOn() { try { return localStorage.getItem('hcc_stamp_nfc') === 'Y'; } catch (e) { return false; } }
   function copyText(t, btn) {
@@ -362,20 +364,23 @@
     return '<div class="sign"><div class="s-church">' + esc(s.church || '') + '</div><div class="s-title">' + esc(s.title || '') + '</div>' +
       '<div class="s-scene">' + esc(s.subtitle || '') + '</div><div style="width:110mm">' + qrSvg(siteBase()) + '</div>' +
       '<div class="s-how">휴대폰 카메라로 QR을 찍어<br>이름과 휴대폰 번호를 넣고 시작하십시오</div>' +
-      '<div class="s-qr"><div>궁금한 점은 ' + esc(s.contact || '') + '에게 연락해 주십시오.</div></div></div>';
+      '<div class="s-qr"><div>궁금한 점은 ' + esc(s.contact || '') + '에게 연락해 주십시오.</div></div>' + bgHtml('magi') + '</div>';
   }
   function renderSigns() {
     var s = data.settings, act = data.places.filter(function (p) { return p.active; });
-    var all = startHtml(s) + act.map(function (p) { return signHtml(p, s); }).join('');
+    var all = startHtml(s) + act.map(function (p, i) { return signHtml(p, s, i); }).join('');
     $('print-area').innerHTML = all;
     $('t-signs').innerHTML = '<div class="card stack-8"><p>장소마다 A4 한 장씩, 맨 앞에는 시작 QR 한 장이 인쇄됩니다. 숫자는 크게, QR은 작게 넣었습니다.</p>' +
       '<p class="muted small">인쇄 전에 휴대폰으로 QR을 한 번씩 찍어 확인해 주십시오. 장소의 숫자나 QR을 바꾸면 다시 인쇄해야 합니다.</p>' +
       '<p class="muted small">시작 QR 주소: ' + esc(siteBase()) + '</p>' +
+      '<label class="choice"><input type="checkbox" id="sg-bg"' + (bgOn() ? ' checked' : '') + '> <span>안내판 아래에 성탄 장면 그림 넣기 (장소의 성탄 장면 이름에 맞춰 고릅니다)</span></label>' +
+      '<p class="muted small">그림이 인쇄되지 않으면 인쇄 창의 <b>배경 그래픽</b>을 켜 주십시오.</p>' +
       '<div class="acts"><button class="btn" id="sg-print" type="button">인쇄하기</button></div></div>' +
       nfcHtml(act) +
       '<div class="preview" style="margin-top:24px">' + all + '</div>';
     $('sg-print').onclick = function () { window.print(); };
     Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (b) { b.onclick = function () { copyText(b.getAttribute('data-copy'), b); }; });
+    if ($('sg-bg')) $('sg-bg').onchange = function () { try { localStorage.setItem('hcc_stamp_bg', this.checked ? 'Y' : 'N'); } catch (e) {} renderSigns(); };
     $('sg-nfc').onchange = function () { try { localStorage.setItem('hcc_stamp_nfc', this.checked ? 'Y' : 'N'); } catch (e) {} renderSigns(); };
   }
 })();
